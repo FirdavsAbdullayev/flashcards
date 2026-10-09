@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flashcards — So'z yodlash</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("flashcards_theme");
+        if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <button id="themeToggle" class="theme-toggle" title="Rejimni almashtirish" aria-label="Mavzuni almashtirish">
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+
+  <div class="bg-blobs" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+    <span class="blob blob-4"></span>
+  </div>
+
+  <header class="site-header">
+    <div class="logo-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    </div>
+    <h1>Flashcards</h1>
+    <p class="subtitle">So'zlarni yodlash uchun aqlli kartochkalar</p>
+  </header>
+
+  <main class="container">
+    <!-- ===== ADD FORM ===== -->
+    <section class="panel" id="addPanel">
+      <button class="panel-collapse" id="addToggle" aria-expanded="true">
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Yangi so'z qo'shish
+        </span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="panel-body" id="addBody">
+        <form id="wordForm" class="word-form">
+          <div class="field">
+            <label for="front">So'z (old tomoni)</label>
+            <input type="text" id="front" placeholder="masalan: apple" autocomplete="off" required />
+          </div>
+          <div class="field">
+            <label for="back">Tarjima (orqa tomoni)</label>
+            <input type="text" id="back" placeholder="masalan: olma" autocomplete="off" required />
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Qo'shish
+          </button>
+        </form>
+        <div class="toolbar">
+          <button id="bulkToggle" class="btn btn-ghost btn-violet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            Ko'pini birga
+          </button>
+          <button id="exportBtn" class="btn btn-ghost btn-teal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            Eksport
+          </button>
+          <label class="btn btn-ghost btn-amber" for="importFile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+            Import
+          </label>
+          <input type="file" id="importFile" accept=".json,.csv,application/json,text/csv" hidden />
+        </div>
+        <div id="bulkArea" class="bulk-area hidden">
+          <p class="hint">Har bir qatorda bitta so'z. Format: <code>so'z = tarjima</code> yoki <code>so'z, tarjima</code></p>
+          <textarea id="bulkInput" rows="6" placeholder="apple = olma&#10;book = kitob&#10;cat, mushuk"></textarea>
+          <button id="bulkAdd" class="btn btn-primary">Barchasini qo'shish</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TABS ===== -->
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-view="study">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Kartochkalar
+      </button>
+      <button class="tab" data-view="quiz">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Test
+      </button>
+      <button class="tab" data-view="manage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        So'zlar
+      </button>
+    </nav>
+
+    <!-- ===== STUDY VIEW ===== -->
+    <section class="view active" id="view-study">
+      <div class="stats">
+        <span class="pill pill-indigo" id="counter">0 / 0</span>
+        <span class="pill pill-emerald" id="learnedStat">O'rganildi: 0</span>
+        <span class="pill pill-pink" id="remainingStat">Qoldi: 0</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+      <div class="card-scene" id="cardScene">
+        <div class="card" id="card">
+          <div class="card-face card-front">
+            <span class="card-label">SAVOL</span>
+            <button class="speak" id="speakBtn" title="Talaffuz">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            </button>
+            <span class="card-text" id="cardFront">Bu yerga so'zlar chiqadi</span>
+            <span class="card-tip">aylantirish uchun bosing</span>
+          </div>
+          <div class="card-face card-back">
+            <span class="card-label">JAVOB</span>
+            <span class="card-text" id="cardBack">Tarjima</span>
+            <span class="card-tip">aylantirish uchun bosing</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="prevBtn" class="btn btn-nav" title="Oldingi (←)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button id="flipBtn" class="btn btn-primary btn-flip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          Aylantirish
+        </button>
+        <button id="nextBtn" class="btn btn-nav" title="Keyingi (→)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <div class="mark-row">
+        <button id="unknownBtn" class="btn btn-danger btn-wide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          Bilmadim
+        </button>
+        <button id="knownBtn" class="btn btn-success btn-wide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          Bildim
+        </button>
+      </div>
+
+      <div class="controls-secondary">
+        <button id="shuffleBtn" class="btn btn-ghost btn-violet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+          Aralashtirish
+        </button>
+        <button id="resetBtn" class="btn btn-ghost btn-teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          Boshidan
+        </button>
+        <label class="switch" title="Tarjimani savol qilib ko'rsatish">
+          <input type="checkbox" id="reverseToggle" />
+          <span class="switch-track"><span class="switch-thumb"></span></span>
+          Teskari
+        </label>
+        <label class="switch" title="Kartani avtomatik talaffuz qilish">
+          <input type="checkbox" id="autoplayToggle" />
+          <span class="switch-track"><span class="switch-thumb"></span></span>
+          Avto-talaffuz
+        </label>
+      </div>
+
+      <div class="empty-study hidden" id="studyEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+        <p>Hozircha so'z yo'q. Yuqoridan so'z qo'shing.</p>
+      </div>
+    </section>
+
+    <!-- ===== QUIZ VIEW ===== -->
+    <section class="view" id="view-quiz">
+      <div class="quiz-setup" id="quizSetup">
+        <div class="setup-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <h2>Bilimingizni sinang</h2>
+        <p class="hint">Har bir savolda to'g'ri tarjimani tanlang.</p>
+        <div class="setup-fields">
+          <label class="field">
+            <span>Savollar soni</span>
+            <select id="quizCount">
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="0">Barchasi</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Yo'nalish</span>
+            <select id="quizDir">
+              <option value="f2b">So'z → Tarjima</option>
+              <option value="b2f">Tarjima → So'z</option>
+            </select>
+          </label>
+        </div>
+        <button id="startQuiz" class="btn btn-primary btn-large">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>
+          Testni boshlash
+        </button>
+        <p class="hint quiz-warn hidden" id="quizWarn">Test uchun kamida 2 ta so'z kerak.</p>
+      </div>
+
+      <div class="quiz-play hidden" id="quizPlay">
+        <div class="quiz-head">
+          <span class="pill pill-indigo" id="quizCounter">1 / 10</span>
+          <span class="pill pill-emerald" id="quizScore">Ball: 0</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="quizProgress"></div></div>
+        <div class="quiz-question" id="quizQuestion">Savol</div>
+        <div class="quiz-options" id="quizOptions"></div>
+      </div>
+
+      <div class="quiz-result hidden" id="quizResult">
+        <div class="result-ring" id="resultRing">
+          <span id="resultPercent">0%</span>
+        </div>
+        <h2 id="resultTitle">Yakunlandi</h2>
+        <p class="hint" id="resultText"></p>
+        <div class="controls-secondary">
+          <button id="retryQuiz" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Qaytadan
+          </button>
+          <button id="backToSetup" class="btn btn-ghost">Sozlamalar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== MANAGE VIEW ===== -->
+    <section class="view" id="view-manage">
+      <div class="panel panel-flat">
+        <div class="list-header">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            So'zlar ro'yxati
+          </h2>
+          <button id="clearAllBtn" class="btn btn-danger">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Tozalash
+          </button>
+        </div>
+        <div class="manage-tools">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="searchInput" placeholder="Qidirish..." />
+          </div>
+          <div class="filters" id="filters">
+            <button class="filter active" data-filter="all">Barchasi</button>
+            <button class="filter" data-filter="unlearned">O'rganilmagan</button>
+            <button class="filter" data-filter="learned">O'rganilgan</button>
+          </div>
+        </div>
+      </div>
+      <ul id="wordList" class="word-list"></ul>
+      <p id="emptyList" class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+        Hozircha so'z yo'q. Yuqoridan qo'shing
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <button class="link-btn" id="helpBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"/><path d="M12 17h.01"/></svg>
+      Klaviatura yorliqlari
+    </button>
+    <span class="dot">•</span>
+    Ma'lumotlar brauzeringizda saqlanadi
+  </footer>
+
+  <!-- ===== HELP MODAL ===== -->
+  <div class="modal hidden" id="helpModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Klaviatura yorliqlari</h3>
+        <button class="icon-btn" id="closeHelp" aria-label="Yopish">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <ul class="shortcut-list">
+        <li><kbd>Space</kbd> / <kbd>Enter</kbd><span>Kartani aylantirish</span></li>
+        <li><kbd>←</kbd> <kbd>→</kbd><span>Oldingi / keyingi karta</span></li>
+        <li><kbd>K</kbd><span>"Bildim" deb belgilash</span></li>
+        <li><kbd>J</kbd><span>"Bilmadim" deb belgilash</span></li>
+        <li><kbd>S</kbd><span>Talaffuzni eshitish</span></li>
+        <li><kbd>1</kbd>–<kbd>4</kbd><span>Testda javobni tanlash</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
